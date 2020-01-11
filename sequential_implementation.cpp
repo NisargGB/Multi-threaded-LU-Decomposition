@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <iostream>
+#include <iomanip>
 #include <string>
 #include <time.h>
 #include <chrono>
+#include <fstream>
 #include <omp.h>
 
 using namespace std;
@@ -10,10 +12,12 @@ using namespace std;
 // #define RAND_MAX 1000
 
 void printMatrix(double* matrix, int dim, string msg);
+void saveResidual(double *matrix, int dim, int id);
 
 int main(int argc, char *argv[])
 {
     // Command line args: <size of matrix A> <number of threads>
+    
     auto start = chrono::high_resolution_clock::now();
 
     string n_str(argv[1]);
@@ -119,6 +123,7 @@ int main(int argc, char *argv[])
     printMatrix((double *)a, n, "Target_out");
     printMatrix((double *)u, n, "Upper_out");
     printMatrix((double *)l, n, "Lower_out");
+    saveResidual((double *)a, n, 0);
 
     auto end = chrono::high_resolution_clock::now();
     auto time_taken = chrono::duration_cast<chrono::milliseconds>(end - start);
@@ -140,4 +145,22 @@ void printMatrix(double* matrix, int dim, string msg)
         }
         printf("\n");
     }
+}
+
+
+void saveResidual(double *matrix, int dim, int id)
+{
+    // Saved as transpose
+    ofstream outfile;
+    outfile.open("seq_residual_" + to_string(id) + ".txt");
+
+    for(int j=0 ; j<dim ; j++)
+    {
+        for(int i=0 ; i<dim ; i++)
+        {
+            outfile << fixed << setprecision(15) << matrix[i*dim + j] << " ";
+        }
+        outfile << '\n';
+    }
+    outfile.close();
 }
