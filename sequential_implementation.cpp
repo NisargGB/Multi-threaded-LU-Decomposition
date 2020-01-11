@@ -13,6 +13,7 @@ void printMatrix(double* matrix, int dim, string msg);
 
 int main(int argc, char *argv[])
 {
+    // Command line args: <size of matrix A> <number of threads>
     auto start = chrono::high_resolution_clock::now();
 
     string n_str(argv[1]);
