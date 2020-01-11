@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
        for (int j=0 ; j<n ; j++)
        {
             a[i][j] = ((double)(rand()%1000)) / 100.0;
+            //a[i][j] = 3*(i) + (j+1);
             // a[i][j] = rand()%10;
             if(j>i)
             {
@@ -58,6 +59,7 @@ int main(int argc, char *argv[])
         }
     }
 
+
     printMatrix((double *)a, n, "Target");
     printMatrix((double *)u, n, "Upper");
     printMatrix((double *)l, n, "Lower");
@@ -68,7 +70,7 @@ int main(int argc, char *argv[])
     {
         double max = 0.0;
         int kd = -1;
-        for(int i=k-1 ; i<n ; i++)
+        for(int i=k; i<n ; i++)
         {
             if(max < abs(a[i][k]))
             {
@@ -80,6 +82,7 @@ int main(int argc, char *argv[])
         if(kd == -1)
         {
             printf("\n\nSingular matrix ERROR\nProgram terminated with code 1\n\n");
+            cout << k << '\n';
             return 1;
         }
 
@@ -96,7 +99,7 @@ int main(int argc, char *argv[])
             a[kd][i] = temp1;
         }
 
-        for(int i=0 ; i<k-1 ; i++)
+        for(int i=0 ; i<k ; i++)
         {
             temp1 = l[k][i];
             l[k][i] = l[kd][i];
@@ -105,7 +108,7 @@ int main(int argc, char *argv[])
 
         u[k][k] = a[k][k];
 
-        for(int i=k ; i<n ; i++)
+        for(int i=k+1 ; i<n ; i++)
         {
             l[i][k] = a[i][k] / u[k][k];
             u[k][i] = a[k][i];
@@ -120,10 +123,15 @@ int main(int argc, char *argv[])
         }
     }
 
-    printMatrix((double *)a, n, "Target_out");
+    printMatrix((double *)a, n, "Residual_matrix");
     printMatrix((double *)u, n, "Upper_out");
     printMatrix((double *)l, n, "Lower_out");
     saveResidual((double *)a, n, 0);
+    cout << "PI vector" << endl;
+    for(int m = 0; m < n; m++)
+    {
+        cout << pi[m] << " ";
+    }
 
     auto end = chrono::high_resolution_clock::now();
     auto time_taken = chrono::duration_cast<chrono::milliseconds>(end - start);
