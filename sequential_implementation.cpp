@@ -6,6 +6,7 @@
 #include <chrono>
 #include <fstream>
 #include <omp.h>
+#include <math.h>
 
 using namespace std;
 
@@ -28,8 +29,18 @@ int main(int argc, char *argv[])
     // Range of random numbers: TODO
     int range = 10;
     long factor = RAND_MAX / range;
-    double a[n][n], l[n][n], u[n][n];           // Matrices A, L, U
-    int pi[n];                                  // Compact permutation matrix
+    //double a[n][n], l[n][n], u[n][n];           // Matrices A, L, U
+    double* a;
+    a = (double*)malloc(sizeof(double)*(n*n));
+    double* l;
+    l = (double*)malloc(sizeof(double)*(n*n));
+    double* u;
+    u = (double*)malloc(sizeof(double)*(n*n));
+    
+    //int pi[n];                                  // Compact permutation matrix
+    int* pi;
+    pi = (int*)malloc(sizeof(int)*(n));
+
     srand(time(0));
 
     // Initializations
@@ -38,43 +49,44 @@ int main(int argc, char *argv[])
        pi[i] = i;
        for (int j=0 ; j<n ; j++)
        {
-            a[i][j] = ((double)(rand()%1000)) / 100.0;
+            a[i*n + j] = ((double)(rand()%1000)) / 100.0;
             //a[i][j] = 3*(i) + (j+1);
             // a[i][j] = rand()%10;
             if(j>i)
             {
-               u[i][j] = a[i][j];
-               l[i][j] = 0.0;
+               u[i*n + j] = a[i*n + j];
+               l[i*n + j] = 0.0;
             }
             else if(j==i)
             {
-               u[i][j] = a[i][j];
-               l[i][j] = 1.0;
+               u[i*n + j] = a[i*n + j];
+               l[i*n + j] = 1.0;
             }
             else
             {
-               u[i][j] = 0.0;
-               l[i][j] = a[i][j];
+               u[i*n + j] = 0.0;
+               l[i*n + j] = a[i*n + j];
             }
         }
     }
 
 
-    printMatrix((double *)a, n, "Target");
-    printMatrix((double *)u, n, "Upper");
-    printMatrix((double *)l, n, "Lower");
+    //printMatrix((double *)a, n, "Target");
+    //printMatrix((double *)u, n, "Upper");
+    //printMatrix((double *)l, n, "Lower");
     
     // Sequential Algorithm
 
     for(int k=0 ; k<n ; k++)
     {
+        //cout << k << endl;
         double max = 0.0;
         int kd = -1;
         for(int i=k; i<n ; i++)
         {
-            if(max < abs(a[i][k]))
+            if(max < abs(a[i*n + k]))
             {
-                max = abs(a[i][k]);
+                max = abs(a[i*n + k]);
                 kd = i;
             }
         }
@@ -91,46 +103,63 @@ int main(int argc, char *argv[])
         pi[k] = pi[kd];
         pi[kd] = temp0;
 
-        double temp1;
-        for(int i=0 ; i<n ; i++)
+        //#pragma omp parallel sections
         {
-            temp1 = a[k][i];
-            a[k][i] = a[kd][i];
-            a[kd][i] = temp1;
+            //#pragma omp section
+            {
+                double temp1;//swap a[k,:] and a[kd,:]
+                //# pragma omp parallel for num_threads(t/2) default(none) private(temp1) shared(n,a,k,kd)
+                for(int i=0 ; i<n ; i++)
+                {
+                    temp1 = a[k*n + i];
+                    a[k*n + i] = a[kd*n + i];
+                    a[kd*n + i] = temp1;
+                }
+            }
+            //swap l[k,1:k-1] and l[kd,1:k-1]
+            //#pragma omp section
+            {
+                double temp2;
+                //# pragma omp parallel for num_threads(t/2) default(none) private(temp2) shared(k,l,kd)
+                for(int i=0 ; i<k ; i++)
+                {
+                    temp2 = l[k*n + i];
+                    l[k*n + i] = l[kd*n + i];
+                    l[kd*n + i] = temp2;
+                }
+            }
         }
 
-        for(int i=0 ; i<k ; i++)
-        {
-            temp1 = l[k][i];
-            l[k][i] = l[kd][i];
-            l[kd][i] = temp1;
-        }
+        u[k*n + k] = a[k*n + k];
 
-        u[k][k] = a[k][k];
-
+        //# pragma omp parallel for num_threads(t) default(none) shared(k,l,a,u,n)
         for(int i=k+1 ; i<n ; i++)
         {
-            l[i][k] = a[i][k] / u[k][k];
-            u[k][i] = a[k][i];
+            l[i*n + k] = a[i*n + k] / u[k*n + k];
+            u[k*n + i] = a[k*n + i];
         }
 
+        int thread_sqrt = floor(sqrt(t));
+        //cout << thread_sqrt << endl;
+        //# pragma omp parallel for num_threads(thread_sqrt) default(none) shared(k,l,a,u,n,thread_sqrt)
         for(int i=k ; i<n ; i++)
         {
+            //# pragma omp parallel for num_threads(thread_sqrt) default(none) shared(k,l,a,u,n,i,thread_sqrt)
             for(int j=k ; j<n ; j++)
             {
-                a[i][j] = a[i][j] - l[i][k] * u[k][j];
+                a[i*n + j] -= l[i*n + k] * u[k*n + j];// minus equal to
             }
         }
     }
 
-    printMatrix((double *)a, n, "Residual_matrix");
-    printMatrix((double *)u, n, "Upper_out");
-    printMatrix((double *)l, n, "Lower_out");
-    saveResidual((double *)a, n, 0);
-    cout << "PI vector" << endl;
+    //printMatrix((double *)a, n, "Residual_matrix");
+    //printMatrix((double *)u, n, "Upper_out");
+    //printMatrix((double *)l, n, "Lower_out");
+    saveResidual(a, n, 0);
+    //cout << "PI vector" << endl;
     for(int m = 0; m < n; m++)
     {
-        cout << pi[m] << " ";
+        //cout << pi[m] << " ";
     }
 
     auto end = chrono::high_resolution_clock::now();
