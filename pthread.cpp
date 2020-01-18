@@ -59,6 +59,7 @@ void* thread_function(void* arg)
             a[i*n + j] -= l[i*n + k] * u[k*n + j];// minus equal to
         }
     }
+    pthread_exit(NULL);
     // cout << "thread id is: " << arg_struct->thread_id << endl;
 }
 
@@ -101,8 +102,8 @@ int main(int argc, char *argv[])
        {
             // srand(time(0));
             // cout << time(0) << '\n';
-            a[i*n + j] = ((double)(rand()%1000)) / 100.0;
-            // a[i*n + j] = 3*(i) + (j+1);
+            // a[i*n + j] = ((double)(rand()%1000)) / 100.0;
+            a[i*n + j] = 3*(i) + (j+1);
             // a[i][j] = rand()%10;
             if(j>i)
             {
@@ -124,9 +125,9 @@ int main(int argc, char *argv[])
     for(int i = 0; i < n; i++)
         pi[i] = i;
 
-    // printMatrix((double *)a, n, "Target");
-    // printMatrix((double *)u, n, "Upper");
-    // printMatrix((double *)l, n, "Lower");
+    printMatrix((double *)a, n, "Target");
+    printMatrix((double *)u, n, "Upper");
+    printMatrix((double *)l, n, "Lower");
     
     for(int k=0 ; k<n ; k++)
     {
@@ -218,6 +219,7 @@ int main(int argc, char *argv[])
             // cout << "thread joining" << endl;
             pthread_join(threads[i],&status[i]);
         }
+
         // tuple<double*, double*, double*>* tup = (tuple<double*, double*, double*>*)status[0];
         // a = (double* ) (get<0>(*tup));
         // l = (double* ) (get<1>(*tup));
@@ -225,14 +227,14 @@ int main(int argc, char *argv[])
 
     }
 
-    // printMatrix(a, n, "Residual_matrix");
-    // printMatrix(u, n, "Upper_out");
-    // printMatrix(l, n, "Lower_out");
-    //  cout << "PI vector" << endl;
-    // for(int m = 0; m < n; m++)
-    // {
-    //     cout << pi[m] << " ";
-    // }
+    printMatrix(a, n, "Residual_matrix");
+    printMatrix(u, n, "Upper_out");
+    printMatrix(l, n, "Lower_out");
+     cout << "PI vector" << endl;
+    for(int m = 0; m < n; m++)
+    {
+        cout << pi[m] << " ";
+    }
 
     auto end = chrono::high_resolution_clock::now();
     auto time_taken = chrono::duration_cast<chrono::milliseconds>(end - start);
