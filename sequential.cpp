@@ -6,7 +6,6 @@
 #include <chrono>
 #include <fstream>
 #include <omp.h>
-#include <math.h>
 
 using namespace std;
 
@@ -17,15 +16,13 @@ void saveResidual(double *matrix, int dim, int id);
 
 int main(int argc, char *argv[])
 {
-    // Command line args: <size of matrix A> <number of threads>
+    // Command line args: <size of matrix A>
     
     auto start = chrono::high_resolution_clock::now();
 
     string n_str(argv[1]);
     int n = stoi(n_str);                        // Dimension of the square matrix
-    string t_str(argv[2]);
-    int t = stoi(t_str);                        // Number of threads
-
+    
     // Range of random numbers: TODO
     int range = 10;
     long factor = RAND_MAX / range;
@@ -50,8 +47,8 @@ int main(int argc, char *argv[])
        for (int j=0 ; j<n ; j++)
        {
             a[i*n + j] = ((double)(rand()%1000)) / 100.0;
-            //a[i][j] = 3*(i) + (j+1);
-            // a[i][j] = rand()%10;
+            //a[i*n + j] = 3*(i) + (j+1);
+            // a[i*n + j] = rand()%10;
             if(j>i)
             {
                u[i*n + j] = a[i*n + j];
@@ -71,15 +68,14 @@ int main(int argc, char *argv[])
     }
 
 
-    //printMatrix((double *)a, n, "Target");
-    //printMatrix((double *)u, n, "Upper");
-    //printMatrix((double *)l, n, "Lower");
+    // printMatrix((double *)a, n, "Target");
+    // printMatrix((double *)u, n, "Upper");
+    // printMatrix((double *)l, n, "Lower");
     
     // Sequential Algorithm
 
     for(int k=0 ; k<n ; k++)
     {
-        //cout << k << endl;
         double max = 0.0;
         int kd = -1;
         for(int i=k; i<n ; i++)
@@ -103,70 +99,53 @@ int main(int argc, char *argv[])
         pi[k] = pi[kd];
         pi[kd] = temp0;
 
-        //#pragma omp parallel sections
+        double temp1;
+        for(int i=0 ; i<n ; i++)
         {
-            //#pragma omp section
-            {
-                double temp1;//swap a[k,:] and a[kd,:]
-                //# pragma omp parallel for num_threads(t/2) default(none) private(temp1) shared(n,a,k,kd)
-                for(int i=0 ; i<n ; i++)
-                {
-                    temp1 = a[k*n + i];
-                    a[k*n + i] = a[kd*n + i];
-                    a[kd*n + i] = temp1;
-                }
-            }
-            //swap l[k,1:k-1] and l[kd,1:k-1]
-            //#pragma omp section
-            {
-                double temp2;
-                //# pragma omp parallel for num_threads(t/2) default(none) private(temp2) shared(k,l,kd)
-                for(int i=0 ; i<k ; i++)
-                {
-                    temp2 = l[k*n + i];
-                    l[k*n + i] = l[kd*n + i];
-                    l[kd*n + i] = temp2;
-                }
-            }
+            temp1 = a[k*n + i];
+            a[k*n + i] = a[kd*n + i];
+            a[kd*n + i] = temp1;
+        }
+
+        for(int i=0 ; i<k ; i++)
+        {
+            temp1 = l[k*n + i];
+            l[k*n + i] = l[kd*n + i];
+            l[kd*n + i] = temp1;
         }
 
         u[k*n + k] = a[k*n + k];
 
-        //# pragma omp parallel for num_threads(t) default(none) shared(k,l,a,u,n)
         for(int i=k+1 ; i<n ; i++)
         {
             l[i*n + k] = a[i*n + k] / u[k*n + k];
             u[k*n + i] = a[k*n + i];
         }
 
-        int thread_sqrt = floor(sqrt(t));
-        //cout << thread_sqrt << endl;
-        //# pragma omp parallel for num_threads(thread_sqrt) default(none) shared(k,l,a,u,n,thread_sqrt)
         for(int i=k ; i<n ; i++)
         {
-            //# pragma omp parallel for num_threads(thread_sqrt) default(none) shared(k,l,a,u,n,i,thread_sqrt)
             for(int j=k ; j<n ; j++)
             {
-                a[i*n + j] -= l[i*n + k] * u[k*n + j];// minus equal to
+                a[i*n + j] = a[i*n + j] - l[i*n + k] * u[k*n + j];
             }
         }
     }
 
-    //printMatrix((double *)a, n, "Residual_matrix");
-    //printMatrix((double *)u, n, "Upper_out");
-    //printMatrix((double *)l, n, "Lower_out");
-    saveResidual(a, n, 0);
-    //cout << "PI vector" << endl;
-    for(int m = 0; m < n; m++)
-    {
-        //cout << pi[m] << " ";
-    }
+    // printMatrix((double *)a, n, "Residual_matrix");
+    // printMatrix((double *)u, n, "Upper_out");
+    // printMatrix((double *)l, n, "Lower_out");
+    // cout << "PI vector" << endl;
+    // for(int m = 0; m < n; m++)
+    // {
+    //     cout << pi[m] << " ";
+    // }
 
     auto end = chrono::high_resolution_clock::now();
     auto time_taken = chrono::duration_cast<chrono::milliseconds>(end - start);
 
-    printf("\n\nTime taken: %.02fs\n", (float)time_taken.count()/1000);
+    printf("\nTime taken: %.02fs\n", (float)time_taken.count()/1000);
 
+    // saveResidual((double *)a, n, 0);
     return 0;
 }
 
@@ -185,15 +164,14 @@ void printMatrix(double* matrix, int dim, string msg)
 }
 
 
-void saveResidual(double *matrix, int dim, int id)
+void saveResidual(double* matrix, int dim, string filename)
 {
-    // Saved as transpose
     ofstream outfile;
-    outfile.open("seq_residual_" + to_string(id) + ".txt");
+    outfile.open(filename, std::ios_base::app);
 
-    for(int j=0 ; j<dim ; j++)
+    for(int i=0 ; i<dim ; i++)
     {
-        for(int i=0 ; i<dim ; i++)
+        for(int j=0 ; j<dim ; j++)
         {
             outfile << fixed << setprecision(15) << matrix[i*dim + j] << " ";
         }

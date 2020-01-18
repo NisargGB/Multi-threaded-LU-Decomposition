@@ -14,7 +14,7 @@ using namespace std;
 // #define RAND_MAX 1000
 
 void printMatrix(double** matrix, int dim, string msg);
-void saveResidual(double** matrix, int dim, int id);
+void saveResidual(double** matrix, int dim, string filename);
 // random_device()
 
 int main(int argc, char *argv[])
@@ -158,9 +158,9 @@ int main(int argc, char *argv[])
         }
     }
 
-    // printMatrix((double *)a, n, "Residual_matrix");
-    // printMatrix((double *)u, n, "Upper_out");
-    // printMatrix((double *)l, n, "Lower_out");
+    printMatrix(a, n, "Residual_matrix");
+    printMatrix(u, n, "Upper_out");
+    printMatrix(l, n, "Lower_out");
     // cout << "PI vector" << endl;
     // for(int m = 0; m < n; m++)
     // {
@@ -191,15 +191,14 @@ void printMatrix(double** matrix, int dim, string msg)
 }
 
 
-void saveResidual(double** matrix, int dim, int id)
+void saveResidual(double** matrix, int dim, string filename)
 {
-    // Saved as transpose
     ofstream outfile;
-    outfile.open("residual_" + to_string(id) + ".txt");
+    outfile.open(filename, std::ios_base::app);
 
-    for(int j=0 ; j<dim ; j++)
+    for(int i=0 ; i<dim ; i++)
     {
-        for(int i=0 ; i<dim ; i++)
+        for(int j=0 ; j<dim ; j++)
         {
             outfile << fixed << setprecision(15) << matrix[i][j] << " ";
         }

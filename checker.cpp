@@ -16,8 +16,21 @@ int main(int argc, char *argv[])
     ifstream infile;
     infile.open(filename);
 
-    double *res;
-    res = (double*)malloc(sizeof(double)*(n*n));
+    double** a;
+    a = (double**)malloc(sizeof(double*)*(n));
+    
+    double* aarr;
+    for(int i=0 ; i<n ; i++)
+    {
+        aarr = (double*)malloc(sizeof(double)*(n));
+        for(int j=0 ; j<n ; j++)
+        {
+            infile >> aarr[j];
+        }
+        a[i] = aarr;
+    }
+    infile.close();
+
     double l21 = 0.0;
 
     for(int j=0 ; j<n ; j++)
@@ -25,8 +38,7 @@ int main(int argc, char *argv[])
         double temp = 0.0;
         for(int i=0 ; i<n ; i++)
         {
-            infile >> res[i*n + j];
-            temp += res[i*n + j] * res[i*n + j];
+            temp += a[i][j] * a[i][j];
         }
         l21 += sqrt(temp);
     }
