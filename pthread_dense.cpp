@@ -16,7 +16,7 @@ using namespace std;
 
 int t_num = 0;
 int dim;
-double **a, **l, **u, **pi;
+double *a, *l, *u, *pi;
 void* thread_function(void* arg);
 
 //struct for passing the arguments to the thread of "Double For" loop
@@ -47,7 +47,7 @@ void* thread_function(void* arg)
     {
         for(int j=k ; j<dim ; j++)
         {
-            a[i][j] -= l[i][k] * u[k][j];// minus equal to
+            a[i*dim + j] -= l[i*dim + k] * u[k*dim + j];// minus equal to
         }
     }
     pthread_exit(NULL);
@@ -62,9 +62,9 @@ void* swap_a(void* arg)
     int kd = swap_struct->kd_value;
     for(int i=0 ; i<dim ; i++)
     {
-        temp1 = a[k][i];
-        a[k][i] = a[kd][i];
-        a[kd][i] = temp1;
+        temp1 = a[k*dim + i];
+        a[k*dim + i] = a[kd*dim + i];
+        a[kd*dim + i] = temp1;
     }
     pthread_exit(NULL);
 }
@@ -78,15 +78,15 @@ void* swap_l(void* arg)
     int kd = swap_struct->kd_value;
     for(int i=0 ; i<k ; i++)
     {
-        temp2 = l[k][i];
-        l[k][i] = l[kd][i];
-        l[kd][i] = temp2;
+        temp2 = l[k*dim + i];
+        l[k*dim + i] = l[kd*dim + i];
+        l[kd*dim + i] = temp2;
     }
     pthread_exit(NULL);
 }
 
-//this function takes the matrices as array of n pointers, dimension of matrix and number of threads as input and uses pthreads to calculate the "l" and the "u" matrices
-vector<double**> pthreadsDecomposition(vector<double**> input, int n_in, int t)
+//this function takes the matrices as a contiguious array, dimension of matrix and number of threads as input and uses pthreads to calculate the "l" and the "u" matrices
+vector<double*> pthreadsDecompositionDense(vector<double*> input, int n_in, int t)
 {
     a = input[0];
     l = input[1];
@@ -94,74 +94,73 @@ vector<double**> pthreadsDecomposition(vector<double**> input, int n_in, int t)
     pi = input[3];
     dim = n_in;
 
-    for(int k=0 ; k<dim ; k++)      //the outer for loop which updates the kth row and kth column of the matrix a.
+    for(int k=0 ; k<dim ; k++)          //the outer for loop which updates the kth row and kth column of the matrix a.
     {
         double max = 0.0;
         int kd = -1;
-        for(int i=k; i<dim ; i++)   //for calculating the max value's index kd
+        for(int i=k; i<dim ; i++)       //for calculating the max value's index kd
         {
-            if(max < abs(a[i][k]))
+            if(max < abs(a[i*dim + k]))
             {
-                max = abs(a[i][k]);
+                max = abs(a[i*dim + k]);
                 kd = i;
             }
         }
         
-        if(max < EPSILON)           // since we are doing double comparisons so instead of checking max = 0.0, we did max < EPSILON defined above as 1e-9
+        if(max < EPSILON)               // since we are doing double comparisons so instead of checking max = 0.0, we did max < EPSILON defined above as 1e-9
         {
             printf("\n\nSingular matrix ERROR\nProgram terminated with code 1\n\n");
             // cout << k << '\n';
             return {};
         }
-        
+
         //updating the pi vector to store the permutation matrix P
         int temp0;
-        temp0 = pi[0][k];
-        pi[0][k] = pi[0][kd];
-        pi[0][kd] = temp0;
+        temp0 = pi[k];
+        pi[k] = pi[kd];
+        pi[kd] = temp0;
 
         //swap a[k,:] and a[kd,:]
         double temp1;
         for(int i=0 ; i<dim ; i++)
         {
-            temp1 = a[k][i];
-            a[k][i] = a[kd][i];
-            a[kd][i] = temp1;
+            temp1 = a[k*dim + i];
+            a[k*dim + i] = a[kd*dim + i];
+            a[kd*dim + i] = temp1;
         }
         //swap l[k,1:k-1] and l[kd,1:k-1]
         double temp2;
         for(int i=0 ; i<k ; i++)
         {
-            temp2 = l[k][i];
-            l[k][i] = l[kd][i];
-            l[kd][i] = temp2;
+            temp2 = l[k*dim + i];
+            l[k*dim + i] = l[kd*dim + i];
+            l[kd*dim + i] = temp2;
         }
 
-        // {
-        // //for doing swap a and swap l in parallel; it creates two threads and pass one to swap_a and one to swap_l function
-        //     pthread_t swap_threads[2];
-        //     swap_arguments *swap_struct;
-        //     swap_struct = (swap_arguments*)malloc(sizeof(swap_arguments));
-        //     swap_struct->k_value = k;
-        //     swap_struct->kd_value = kd;
-        //     pthread_create(&swap_threads[0], NULL, swap_a, (void*)swap_struct);
-        //     pthread_create(&swap_threads[1], NULL, swap_l, (void*)swap_struct);
-        //     
-        //     // waits here for both the threads to finish their tasks and then proceed further into the algorithm    
-        //     void* swap_status[2];
-        //     pthread_join(swap_threads[0], &swap_status[0]);
-        //     pthread_join(swap_threads[1], &swap_status[1]);
-        // }
+        {
+            // // for doing swap a and swap l in parallel; it creates two threads and pass one to swap_a and one to swap_l function
+            // pthread_t swap_threads[2];
+            // swap_arguments *swap_struct;
+            // swap_struct = (swap_arguments*)malloc(sizeof(swap_arguments));
+            // swap_struct->k_value = k;
+            // swap_struct->kd_value = kd;
+            // pthread_create(&swap_threads[0], NULL, swap_a, (void*)swap_struct);
+            // pthread_create(&swap_threads[1], NULL, swap_l, (void*)swap_struct);
+            // // waits here for both the threads to finish their tasks and then proceed further into the algorithm
+            // void* swap_status[2];
+            // pthread_join(swap_threads[0], &swap_status[0]);
+            // pthread_join(swap_threads[1], &swap_status[1]);
+        }
 
-        u[k][k] = a[k][k];
+        u[k*dim + k] = a[k*dim + k];
 
         for(int i=k+1 ; i<dim ; i++)
         {
-            l[i][k] = a[i][k] / u[k][k];
-            u[k][i] = a[k][i];
+            l[i*dim + k] = a[i*dim + k] / u[k*dim + k];
+            u[k*dim + i] = a[k*dim + i];
         }
 
-        t_num = 0; //initialise t_num back from zero
+        t_num = 0;//initialise t_num back from zero
         // create t threads; divide the work among the threads uniformly (following a static schedule) by passing the "low" and the "high" row indices to every thread
         // and then call the thread_function to do the "a" matrix update
         pthread_t threads[t];

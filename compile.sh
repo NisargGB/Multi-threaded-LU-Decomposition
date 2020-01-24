@@ -1,0 +1,2 @@
+g++ -o bin/LUDecomposer_sparse src/main_sparse.cpp src/util.cpp src/sequential_sparse.cpp src/openmp_sparse.cpp src/pthreads_sparse.cpp -fopenmp -lpthread -pthread
+g++ -o bin/LUDecomposer_dense src/main_dense.cpp src/util.cpp src/sequential_dense.cpp src/openmp_dense.cpp src/pthread_dense.cpp -lpthread -pthread -fopenmp 

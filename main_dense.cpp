@@ -13,7 +13,7 @@
 
 using namespace std;
 
-int n;  // dimension of the matrix
+int n;// dimension of the matrix
 int t;  // number of threads
 
 
@@ -53,8 +53,7 @@ int main(int argc, char *argv[])
         cout << "There was an error parsing the input: argument3 needs to be integer" << '\n';
         return -1;
     }
-    
-        
+                           
     string checkNorm_str(argv[4]);
     bool checkNorm;                         // Whether to check norm of A residual
     if(checkNorm_str == "true")
@@ -78,36 +77,37 @@ int main(int argc, char *argv[])
         return -1;
     }
     
-    double** a;     //the SPARSE implementation: an array of n pointers.
-    double** l;
-    double** u;
-    double** pi;
-    vector<double**> matrices = initialiseMatrices(n);      //initialises the matries a, l and u using Uniform Real Distribution
+    double* a;      //the DENSE implementation: a contiguous array
+    double* l;
+    double* u;
+    double* pi;
+    vector<double*> matrices = initialiseMatricesDense(n);      //initialises the matries a, l and u using Uniform Real Distribution
     a = matrices[0];
     l = matrices[1];
     u = matrices[2];
     pi = matrices[3];
-    // printMatrix(a, n, "Target");         //function to print the matrix on the console
-    // printMatrix(l, n, "Lower");
-    // printMatrix(u, n, "Upper");
+    // printMatrixDense(a, n, "Target");     //function to print the matrix on the console
+    // printMatrixDense(l, n, "Lower");
+    // printMatrixDense(u, n, "Upper");
     vector<int> thread_vec = {1, 2, 4, 6, 8, 12, 16, 32};
-    vector<double**> output;
-    vector<double**> input = {a, l, u, pi};
+    
+    vector<double*> output;
+    vector<double*> input = {a, l, u, pi};
     
     if(checkMult)
     {
-        saveMatrix(a, n, "ALU.txt", "a");       //saves the matrix in row major format in file named "ALU.txt"
-    }   
+        saveMatrixDense(a, n, "ALU.txt", "a");      //saves the matrix in row major format in file named "ALU.txt"
+    }
 
     if(mode == "sequential")
     {
-        output = sequentialDecomposition(input, n);     //for carrying out the program sequentially.
+        output = sequentialDecompositionDense(input, n);    //for carrying out the program sequentially.
     }
     else if(mode == "openmp")
     {
-        // for(int x : thread_vec)      //for checking performance of multiple threads
+        // for(int x : thread_vec)         //for checking performance of multiple threads
         // {
-        //     output = openmpDecomposition(input, n, x);
+        //     output = openmpDecompositionDense(input, n, x);
         //     auto end = chrono::high_resolution_clock::now();
         //     auto time_taken = chrono::duration_cast<chrono::milliseconds>(end - start);
         //     printf("\nTime taken: %.02fs, thread num: %d\n", (float)time_taken.count()/1000, x);
@@ -116,18 +116,18 @@ int main(int argc, char *argv[])
         //     free(u);
         //     free(pi);
         //     start = chrono::high_resolution_clock::now();
-        //     matrices = initialiseMatrices(n);
+        //     matrices = initialiseMatricesDense(n);
         //     a = matrices[0];
         //     l = matrices[1];
         //     u = matrices[2];
         //     pi = matrices[3];
         //     input = {a, l, u, pi};
         // }
-        output = openmpDecomposition(input, n, t);      //for carrying out the program using openmp
+        output = openmpDecompositionDense(input, n, t);      //for carrying out the program using openmp
     }
     else if(mode == "pthreads")
     {
-        // for(int x : thread_vec)      //for checking performance of multiple threads
+        // for(int x : thread_vec)             //for checking performance of multiple threads
         // {
         //     output = pthreadsDecomposition(input, n, x);
         //     auto end = chrono::high_resolution_clock::now();
@@ -145,7 +145,8 @@ int main(int argc, char *argv[])
         //     pi = matrices[3];
         //     input = {a, l, u, pi};
         // }
-        output = pthreadsDecomposition(input, n, t);    //for carrying out the program using pthreads
+        output = pthreadsDecompositionDense(input, n, t);       //for carrying out the program using pthreads
+
     }
     else
     {
@@ -160,23 +161,23 @@ int main(int argc, char *argv[])
 
     if(checkMult)
     {
-        saveMatrix(a,n, "ALU.txt", "ares");     //in the same file "ALU.txt" saves A residual, then L, then U and then P.
-        saveMatrix(l,n, "ALU.txt", "l");
-        saveMatrix(u,n, "ALU.txt", "u");
-        saveMatrix(pi,n, "ALU.txt", "pi");
+        saveMatrixDense(a,n, "ALU.txt", "ares");        //in the same file "ALU.txt" saves A residual, then L, then U and then P.
+        saveMatrixDense(l,n, "ALU.txt", "l");
+        saveMatrixDense(u,n, "ALU.txt", "u");
+        saveMatrixDense(pi,n, "ALU.txt", "pi");
     }
     
     if(checkNorm)
     {
         double l21 = -1;
-        l21 = l21norm(a, n);        //function to check the l21 norm of a matrix
+        l21 = l21normDense(a, n);       //function to check the l21 norm of a matrix
         cout << "\nL2,1 Norm of the matrix = " << l21 << "\n";
     }
 
-    // printMatrix(a, n, "Residual_matrix");
-    // printMatrix(l, n, "Lower_out");
-    // printMatrix(u, n, "Upper_out");
-    // printMatrix(pi, n, "pi");
+    // printMatrixDense(a, n, "Residual_matrix");
+    // printMatrixDense(l, n, "Lower_out");
+    // printMatrixDense(u, n, "Upper_out");
+    // printMatrixDense(pi, n, "pi");
 
     auto end = chrono::high_resolution_clock::now();
     auto time_taken = chrono::duration_cast<chrono::milliseconds>(end - start);     //the total time required for the complete execution of the program
